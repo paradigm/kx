@@ -1,0 +1,127 @@
+#!/bin/sh
+
+abort(){
+	echo "kx ERROR: $1" >&2
+	exit 1
+
+}
+
+if [ -f /etc/arch-release ]
+then
+	if which packer >/dev/null && which pacman >/dev/null
+	then
+		PACKAGE_MANAGER="packer"
+	elif which pacman >/dev/null
+	then
+		PACKAGE_MANAGER="pacman"
+	fi
+elif grep -q "^Debian GNU/Linux\|^Ubuntu\|^Linux Mint" /etc/issue
+then
+	if [ -f /var/log/aptitude ] && which aptitude >/dev/null
+	then
+		PACKAGE_MANAGER="aptitude"
+	elif which apt-get >/dev/null
+	then
+		PACKAGE_MANAGER="apt"
+	fi
+elif [ -f /etc/slackware-release ]
+then
+	if which slackpkg >/dev/null
+	then
+		PACKAGE_MANAGER="slackpkg"
+	fi
+elif [ -f /etc/gentoo-release ]
+then
+	if which emerge >/dev/null
+	then
+		PACKAGE_MANAGER="emerge"
+	fi
+elif [ -f /etc/fedora-release ]
+then
+	if which yum >/dev/null
+	then
+		PACKAGE_MANAGER="yum"
+	fi
+else
+	abort "Unable to determine package manager"
+fi
+
+
+if [ $(id -u) -ne 0 ] && which sudo >/dev/null
+then
+	SUDO="sudo "
+else
+	SUDO=""
+fi
+
+if echo $(basename $0) | grep -q "^k.$"
+then
+	ALIASOREXEC="exec"
+else
+	ALIASOREXEC="alias"
+fi
+
+get_ki(){
+	#PACKAGE_MANAGER=$(get_package_manager)
+	#SUDO=$(get_use_sudo)
+	if [ "$ALIASOREXEC" = "exec" ]
+	then
+		PRE="exec $SUDO"
+		POST=""
+	else
+		PRE="alias $(basename $0)=\"$SUDO"
+		POST="\""
+	fi
+	if [ "$PACKAGE_MANAGER" = "apt" ]
+	then
+		CMD="apt-get install"
+	elif [ "$PACKAGE_MANAGER" = "packer" ]
+	then
+		CMD="pacman -S"
+	elif [ "$PACKAGE_MANAGER" = "pacman" ]
+	then
+		CMD="pacman -S"
+	elif [ "$PACKAGE_MANAGER" = "yum" ]
+	then
+		CMD="yum install"
+	elif [ "$PACKAGE_MANAGER" = "slackpkg" ]
+	then
+		CMD="slackpkg install"
+	elif [ "$PACKAGE_MANAGER" = "emerge" ] 
+	then
+		CMD="emerge"
+	else
+		echo ""
+		return 0
+	fi
+	echo "${PRE}${CMD}${POST}"
+}
+
+if [ "$ALIASOREXEC" = "alias" ]
+then
+	for k in "i" #"r" "u" "U" "l" "c" "s" "b" "w" "f"
+	do
+		CMD=$(eval "get_k$k")
+		if [ ! -z "$CMD" ]
+		then
+			echo $CMD
+		fi
+	done
+else
+	if [ "$(basename $0)" = "kx" ]
+	then
+		k="$1"
+		shift
+		CMD=$(eval "get_k$k")
+		if [ ! -z "$CMD" ]
+		then
+			echo $CMD $@
+		fi
+	else
+		CMD=$(eval "get_$(basename $0)")
+		if [ ! -z "$CMD" ]
+		then
+			echo $CMD $@
+		fi
+	fi
+fi

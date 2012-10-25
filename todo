@@ -1,0 +1,3 @@
+TODO:
+- add other Arch AUR helpers such as yogurt^H^H^H^H^H^Hyaourt
+- warn that apt will default over aptitude if aptitude log is not found
